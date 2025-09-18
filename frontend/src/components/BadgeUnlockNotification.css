@@ -1,0 +1,170 @@
+/* Badge Unlock Notification Styles */
+
+.badge-notification {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 9999;
+  max-width: 360px;
+  width: calc(100% - 2rem);
+  pointer-events: none;
+}
+
+.badge-notification-enter {
+  animation: badge-slide-in 300ms ease-out forwards;
+}
+
+.badge-notification-exit {
+  animation: badge-slide-out 300ms ease-in forwards;
+}
+
+@keyframes badge-slide-in {
+  0% { opacity: 0; transform: translateY(16px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes badge-slide-out {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(16px) scale(0.98); }
+}
+
+.badge-notification-content {
+  pointer-events: auto;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.18), 0 2px 8px rgba(2, 6, 23, 0.12);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.badge-notification-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.75rem 0 0.75rem;
+}
+
+.badge-notification-icon {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
+  border: 3px solid #94a3b8; /* overridden inline by rarity color */
+  box-shadow: inset 0 0 10px rgba(2, 6, 23, 0.05);
+}
+
+.badge-notification-emoji {
+  font-size: 2rem;
+}
+
+.badge-notification-sparkle {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fef3c7;
+  color: #b45309;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);
+  animation: sparkle-pop 700ms ease-in-out both;
+}
+
+@keyframes sparkle-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.badge-notification-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.badge-notification-close:hover {
+  background: #f1f5f9;
+  color: #1f2937;
+}
+
+.badge-notification-body {
+  padding: 0.75rem 1rem 1rem 1rem;
+}
+
+.badge-notification-title {
+  margin: 0.25rem 0 0.25rem 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.2px;
+}
+
+.badge-notification-badge-name {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.badge-notification-message {
+  margin: 0.25rem 0 0.75rem 0;
+  font-size: 0.95rem;
+  color: #475569;
+}
+
+.badge-notification-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.badge-notification-rarity {
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.badge-common { background: #f1f5f9; color: #475569; }
+.badge-uncommon { background: #dbeafe; color: #1e40af; }
+.badge-rare { background: #e0e7ff; color: #5b21b6; }
+.badge-epic { background: #fce7f3; color: #be185d; }
+.badge-legendary { background: #fef3c7; color: #92400e; }
+
+.badge-notification-points {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #059669;
+}
+
+/* Stack multiple notifications */
+.badge-notification + .badge-notification {
+  margin-bottom: 0.75rem;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .badge-notification { right: 0.75rem; bottom: 0.75rem; }
+  .badge-notification-content { border-radius: 12px; }
+  .badge-notification-icon { width: 56px; height: 56px; }
+  .badge-notification-emoji { font-size: 1.75rem; }
+}
+

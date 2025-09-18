@@ -1,0 +1,179 @@
+/* Drawing Canvas Component Styles */
+
+.drawing-canvas-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 500px;
+}
+
+/* Canvas element styling */
+.drawing-canvas-container canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Toolbar responsive adjustments */
+@media (max-width: 768px) {
+  .drawing-canvas-container .bg-white {
+    padding: 0.75rem;
+  }
+  
+  .drawing-canvas-container .flex {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .drawing-canvas-container .flex > div {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Stack color palette vertically on mobile */
+  .drawing-canvas-container .flex.gap-1 {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* Color palette button hover effects */
+.drawing-canvas-container button[style*="background-color"] {
+  transition: all 0.2s ease-in-out;
+}
+
+.drawing-canvas-container button[style*="background-color"]:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Active tool button styling */
+.drawing-canvas-container button.active {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border-color: #2563eb !important;
+}
+
+/* Canvas container responsive behavior */
+@media (max-width: 640px) {
+  .drawing-canvas-container .flex-1 {
+    min-height: 400px;
+  }
+}
+
+/* Touch-friendly button sizing for mobile */
+@media (max-width: 768px) {
+  .drawing-canvas-container button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .drawing-canvas-container select {
+    min-height: 44px;
+  }
+}
+
+/* Smooth transitions for all interactive elements */
+.drawing-canvas-container * {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Focus states for accessibility */
+.drawing-canvas-container button:focus,
+.drawing-canvas-container select:focus,
+.drawing-canvas-container input:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Loading state for canvas */
+.drawing-canvas-container canvas.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Success notification animation */
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.drawing-canvas-container .notification {
+  animation: slideInUp 0.3s ease-out;
+}
+
+/* Canvas border and shadow effects */
+.drawing-canvas-container canvas {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 2px solid #e5e7eb;
+}
+
+.drawing-canvas-container canvas:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Toolbar button states */
+.drawing-canvas-container .toolbar-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.drawing-canvas-container .toolbar-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.drawing-canvas-container .toolbar-button:hover::before {
+  left: 100%;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 480px) {
+  .drawing-canvas-container .text-sm {
+    font-size: 0.875rem;
+  }
+  
+  .drawing-canvas-container .p-4 {
+    padding: 0.5rem;
+  }
+  
+  .drawing-canvas-container .gap-4 {
+    gap: 0.5rem;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .drawing-canvas-container canvas {
+    border: 3px solid #000000;
+  }
+  
+  .drawing-canvas-container button {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .drawing-canvas-container * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+

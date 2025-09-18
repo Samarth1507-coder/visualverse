@@ -1,0 +1,278 @@
+/* Badge Collection Component Styles */
+
+.badge-collection {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.badge-collection-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.badge-collection-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 1rem;
+}
+
+.badge-summary {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  margin-top: 1.5rem;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.summary-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+.summary-label {
+  font-size: 0.9rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* Filter Styles */
+.badge-filters {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-group select {
+  padding: 0.5rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: white;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-group select:hover {
+  border-color: #3b82f6;
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Badge Grid */
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+/* Next Badges Section */
+.next-badges {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.next-badges h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.next-badges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+/* Loading and Error States */
+.badge-collection-loading,
+.badge-collection-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.badge-collection-loading p {
+  font-size: 1.1rem;
+  color: #64748b;
+}
+
+.badge-collection-error p {
+  font-size: 1.1rem;
+  color: #ef4444;
+  margin-bottom: 1rem;
+}
+
+/* No Badges State */
+.no-badges {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.no-badges p {
+  font-size: 1.1rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .badge-collection {
+    padding: 1.5rem;
+  }
+
+  .badge-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1rem;
+  }
+
+  .next-badges-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .badge-collection-header h1 {
+    font-size: 2rem;
+  }
+
+  .badge-summary {
+    gap: 2rem;
+  }
+
+  .summary-number {
+    font-size: 1.5rem;
+  }
+
+  .badge-filters {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .filter-group {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .filter-group label {
+    margin-bottom: 0;
+  }
+
+  .filter-group select {
+    min-width: 150px;
+  }
+
+  .badge-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .next-badges-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .badge-collection {
+    padding: 1rem;
+  }
+
+  .badge-collection-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .badge-summary {
+    gap: 1.5rem;
+  }
+
+  .summary-number {
+    font-size: 1.25rem;
+  }
+
+  .summary-label {
+    font-size: 0.8rem;
+  }
+
+  .badge-filters {
+    padding: 1rem;
+  }
+
+  .filter-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group select {
+    min-width: auto;
+  }
+
+  .next-badges {
+    padding: 1.5rem;
+  }
+
+  .next-badges h3 {
+    font-size: 1.25rem;
+  }
+}
