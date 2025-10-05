@@ -1,3 +1,6 @@
+const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
+
 const Badge = require('../models/Badge');
 const UserBadge = require('../models/UserBadge');
 const User = require('../models/User');
@@ -12,12 +15,10 @@ class BadgeService {
    */
   static async checkAndUpdateBadgeProgress(userId, criteriaType, currentValue) {
     try {
-      // Get all badges for this criteria type
       const badges = await Badge.getByCriteriaType(criteriaType);
       const newlyUnlockedBadges = [];
 
       for (const badge of badges) {
-        // Create or update user badge progress
         const userBadge = await UserBadge.createOrUpdateProgress(
           userId,
           badge._id,
@@ -25,17 +26,13 @@ class BadgeService {
           badge.criteria.threshold
         );
 
-        // Check if badge was just unlocked
         if (userBadge.progress.current >= userBadge.progress.target && !userBadge.isUnlocked) {
           await userBadge.unlock();
-          newlyUnlockedBadges.push({
-            badge: badge,
-            userBadge: userBadge
-          });
+          newlyUnlockedBadges.push({ badge, userBadge });
+          console.log(`✅ User ${userId} unlocked badge: ${badge.name}`);
         }
       }
 
-      // Update user's badge statistics
       if (newlyUnlockedBadges.length > 0) {
         const user = await User.findById(userId);
         await user.updateBadgeStats();
@@ -49,12 +46,27 @@ class BadgeService {
   }
 
   /**
-   * Check doodles completed badges
-   * @param {string} userId - User ID
+   * Get basic doodle stats for a user to avoid repeated DB queries
    */
+  static async getUserDoodleStats(userId) {
+    const userObjectId = ObjectId(userId);
+
+    const [totalLikesAgg, doodlesCount, uniqueChallenges] = await Promise.all([
+      Doodle.aggregate([
+        { $match: { userId: userObjectId } },
+        { $group: { _id: null, totalLikes: { $sum: '$likes' } } }
+      ]),
+      Doodle.countDocuments({ userId: userObjectId }),
+      Doodle.distinct('challengeId', { userId: userObjectId })
+    ]);
+
+    const totalLikes = totalLikesAgg.length > 0 ? totalLikesAgg[0].totalLikes : 0;
+    return { totalLikes, doodlesCount, challengesCount: uniqueChallenges.length };
+  }
+
   static async checkDoodlesCompletedBadges(userId) {
     try {
-      const doodlesCount = await Doodle.countDocuments({ userId });
+      const { doodlesCount } = await this.getUserDoodleStats(userId);
       return await this.checkAndUpdateBadgeProgress(userId, 'doodles_completed', doodlesCount);
     } catch (error) {
       console.error('Error checking doodles completed badges:', error);
@@ -62,14 +74,9 @@ class BadgeService {
     }
   }
 
-  /**
-   * Check challenges participated badges
-   * @param {string} userId - User ID
-   */
   static async checkChallengesParticipatedBadges(userId) {
     try {
-      const uniqueChallenges = await Doodle.distinct('challengeId', { userId });
-      const challengesCount = uniqueChallenges.length;
+      const { challengesCount } = await this.getUserDoodleStats(userId);
       return await this.checkAndUpdateBadgeProgress(userId, 'challenges_participated', challengesCount);
     } catch (error) {
       console.error('Error checking challenges participated badges:', error);
@@ -77,33 +84,20 @@ class BadgeService {
     }
   }
 
-  /**
-   * Check likes received badges
-   * @param {string} userId - User ID
-   */
   static async checkLikesReceivedBadges(userId) {
     try {
-      const totalLikes = await Doodle.aggregate([
-        { $match: { userId: require('mongoose').Types.ObjectId(userId) } },
-        { $group: { _id: null, totalLikes: { $sum: '$likes' } } }
-      ]);
-
-      const likesCount = totalLikes.length > 0 ? totalLikes[0].totalLikes : 0;
-      return await this.checkAndUpdateBadgeProgress(userId, 'likes_received', likesCount);
+      const { totalLikes } = await this.getUserDoodleStats(userId);
+      return await this.checkAndUpdateBadgeProgress(userId, 'likes_received', totalLikes);
     } catch (error) {
       console.error('Error checking likes received badges:', error);
       throw error;
     }
   }
 
-  /**
-   * Check days streak badges
-   * @param {string} userId - User ID
-   */
   static async checkDaysStreakBadges(userId) {
     try {
       const user = await User.findById(userId);
-      const streakDays = user.progress.streakDays;
+      const streakDays = user.progress?.streakDays || 0;
       return await this.checkAndUpdateBadgeProgress(userId, 'days_streak', streakDays);
     } catch (error) {
       console.error('Error checking days streak badges:', error);
@@ -111,14 +105,10 @@ class BadgeService {
     }
   }
 
-  /**
-   * Check perfect ratings badges
-   * @param {string} userId - User ID
-   */
   static async checkPerfectRatingsBadges(userId) {
     try {
       const perfectRatings = await Doodle.countDocuments({
-        userId,
+        userId: ObjectId(userId),
         rating: { $gte: 4.5 }
       });
       return await this.checkAndUpdateBadgeProgress(userId, 'perfect_ratings', perfectRatings);
@@ -128,23 +118,10 @@ class BadgeService {
     }
   }
 
-  /**
-   * Check community contributor badges
-   * @param {string} userId - User ID
-   */
   static async checkCommunityContributorBadges(userId) {
     try {
-      const user = await User.findById(userId);
-      const totalLikes = await Doodle.aggregate([
-        { $match: { userId: require('mongoose').Types.ObjectId(userId) } },
-        { $group: { _id: null, totalLikes: { $sum: '$likes' } } }
-      ]);
-
-      const likesCount = totalLikes.length > 0 ? totalLikes[0].totalLikes : 0;
-      const doodlesCount = await Doodle.countDocuments({ userId });
-      
-      // Community contributor score based on likes and doodles
-      const contributorScore = Math.floor((likesCount * 0.7) + (doodlesCount * 0.3));
+      const { totalLikes, doodlesCount } = await this.getUserDoodleStats(userId);
+      const contributorScore = Math.floor(totalLikes * 0.7 + doodlesCount * 0.3);
       return await this.checkAndUpdateBadgeProgress(userId, 'community_contributor', contributorScore);
     } catch (error) {
       console.error('Error checking community contributor badges:', error);
@@ -152,10 +129,6 @@ class BadgeService {
     }
   }
 
-  /**
-   * Check all badge types for a user
-   * @param {string} userId - User ID
-   */
   static async checkAllBadges(userId) {
     try {
       const results = {
@@ -167,50 +140,30 @@ class BadgeService {
         communityContributor: await this.checkCommunityContributorBadges(userId)
       };
 
-      const allNewlyUnlocked = Object.values(results).flat();
-      return {
-        results,
-        totalNewlyUnlocked: allNewlyUnlocked.length,
-        newlyUnlockedBadges: allNewlyUnlocked
-      };
+      const newlyUnlockedBadges = Object.values(results).flat();
+      return { results, totalNewlyUnlocked: newlyUnlockedBadges.length, newlyUnlockedBadges };
     } catch (error) {
       console.error('Error checking all badges:', error);
       throw error;
     }
   }
 
-  /**
-   * Get user's badge progress summary
-   * @param {string} userId - User ID
-   */
   static async getUserBadgeSummary(userId) {
     try {
       const user = await User.findById(userId);
       const summary = await user.getBadgeProgressSummary();
       const userProgress = await UserBadge.getUserProgress(userId);
-
-      return {
-        summary,
-        userProgress,
-        badgeStats: user.badgeStats
-      };
+      return { summary, userProgress, badgeStats: user.badgeStats };
     } catch (error) {
       console.error('Error getting user badge summary:', error);
       throw error;
     }
   }
 
-  /**
-   * Award a specific badge to a user (admin function)
-   * @param {string} userId - User ID
-   * @param {string} badgeId - Badge ID
-   */
   static async awardBadge(userId, badgeId) {
     try {
       const badge = await Badge.findById(badgeId);
-      if (!badge) {
-        throw new Error('Badge not found');
-      }
+      if (!badge) throw new Error('Badge not found');
 
       const userBadge = await UserBadge.findOneAndUpdate(
         { userId, badgeId },
@@ -226,16 +179,13 @@ class BadgeService {
             lastUpdated: new Date()
           }
         },
-        {
-          upsert: true,
-          new: true
-        }
+        { upsert: true, new: true }
       );
 
-      // Update user's badge statistics
       const user = await User.findById(userId);
       await user.updateBadgeStats();
 
+      console.log(`✅ Badge ${badge.name} awarded to user ${userId}`);
       return userBadge;
     } catch (error) {
       console.error('Error awarding badge:', error);

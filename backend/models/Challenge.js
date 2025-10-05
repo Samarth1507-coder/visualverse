@@ -54,14 +54,6 @@ const challengeSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
 }, {
   timestamps: true,
@@ -69,7 +61,11 @@ const challengeSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Virtual for challenge statistics
+// ------------------------
+// Virtuals
+// ------------------------
+
+// Count of submissions for this challenge
 challengeSchema.virtual('submissionCount', {
   ref: 'Doodle',
   localField: '_id',
@@ -77,28 +73,33 @@ challengeSchema.virtual('submissionCount', {
   count: true
 });
 
-// Virtual for average rating
+// Average rating of all submissions for this challenge
 challengeSchema.virtual('averageRating', {
   ref: 'Doodle',
   localField: '_id',
   foreignField: 'challengeId',
-  pipeline: [
-    { $group: { _id: null, avgRating: { $avg: '$rating' } } }
-  ]
+  justOne: true,
+  options: { select: 'rating' }
 });
 
-// Index for efficient queries
+// ------------------------
+// Indexes
+// ------------------------
 challengeSchema.index({ category: 1, difficulty: 1, isActive: 1 });
 challengeSchema.index({ tags: 1 });
 challengeSchema.index({ createdAt: -1 });
 
-// Pre-save middleware to update the updatedAt field
+// ------------------------
+// Pre-save middleware
+// ------------------------
 challengeSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
 
-// Static method to get challenges with filters
+// ------------------------
+// Static method: Get challenges with filters
+// ------------------------
 challengeSchema.statics.getChallenges = function(filters = {}) {
   const {
     category,
@@ -112,7 +113,6 @@ challengeSchema.statics.getChallenges = function(filters = {}) {
   } = filters;
 
   const query = { isActive: true };
-
   if (category) query.category = category;
   if (difficulty) query.difficulty = difficulty;
   if (tags && tags.length > 0) query.tags = { $in: tags };
@@ -129,16 +129,16 @@ challengeSchema.statics.getChallenges = function(filters = {}) {
 
   return this.find(query)
     .sort(sortOptions)
-    .limit(limit * 1)
     .skip((page - 1) * limit)
-    .populate('submissionCount')
-    .populate('averageRating');
+    .limit(limit);
 };
 
-// Instance method to get challenge statistics
+// ------------------------
+// Instance method: Get challenge statistics
+// ------------------------
 challengeSchema.methods.getStats = async function() {
   const Doodle = mongoose.model('Doodle');
-  
+
   const stats = await Doodle.aggregate([
     { $match: { challengeId: this._id } },
     {
@@ -155,4 +155,3 @@ challengeSchema.methods.getStats = async function() {
 };
 
 module.exports = mongoose.model('Challenge', challengeSchema);
-

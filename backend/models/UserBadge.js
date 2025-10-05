@@ -1,122 +1,127 @@
 const mongoose = require('mongoose');
 
+// Sub-schema for progress within a badge
+const progressSchema = new mongoose.Schema({
+  current: {
+    type: Number,
+    default: 0,
+    min: [0, 'Progress cannot be negative'],
+  },
+  target: {
+    type: Number,
+    required: [true, 'Target progress is required'],
+    min: [1, 'Target must be at least 1'],
+  },
+  percentage: {
+    type: Number,
+    default: 0,
+    min: [0, 'Percentage cannot be negative'],
+    max: [100, 'Percentage cannot exceed 100'],
+  },
+}, { _id: false });
+
 const userBadgeSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'User ID is required']
+    required: [true, 'User ID is required'],
+    index: true,
   },
   badgeId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Badge',
-    required: [true, 'Badge ID is required']
+    required: [true, 'Badge ID is required'],
+    index: true,
   },
   isUnlocked: {
     type: Boolean,
-    default: false
+    default: false,
+    index: true,
   },
   unlockedAt: {
     type: Date,
-    default: null
+    default: null,
+    index: true,
   },
   progress: {
-    current: {
-      type: Number,
-      default: 0,
-      min: [0, 'Progress cannot be negative']
-    },
-    target: {
-      type: Number,
-      required: [true, 'Target progress is required'],
-      min: [1, 'Target must be at least 1']
-    },
-    percentage: {
-      type: Number,
-      default: 0,
-      min: [0, 'Percentage cannot be negative'],
-      max: [100, 'Percentage cannot exceed 100']
-    }
+    type: progressSchema,
+    required: true,
   },
   lastUpdated: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  toObject: { virtuals: true },
 });
 
-// Compound index for efficient queries
+// Compound unique index to avoid duplicates
 userBadgeSchema.index({ userId: 1, badgeId: 1 }, { unique: true });
-userBadgeSchema.index({ userId: 1, isUnlocked: 1 });
-userBadgeSchema.index({ userId: 1, 'progress.percentage': -1 });
 
-// Virtual for badge info
+// Virtuals for badge and user details
 userBadgeSchema.virtual('badge', {
   ref: 'Badge',
   localField: 'badgeId',
   foreignField: '_id',
-  justOne: true
+  justOne: true,
 });
 
-// Virtual for user info
 userBadgeSchema.virtual('user', {
   ref: 'User',
   localField: 'userId',
   foreignField: '_id',
-  justOne: true
+  justOne: true,
 });
 
-// Method to update progress
-userBadgeSchema.methods.updateProgress = function(currentValue) {
+// Methods for progress updates and unlock
+userBadgeSchema.methods.updateProgress = async function (currentValue) {
   this.progress.current = Math.min(currentValue, this.progress.target);
   this.progress.percentage = Math.round((this.progress.current / this.progress.target) * 100);
   this.lastUpdated = new Date();
-  
-  // Check if badge should be unlocked
-  if (this.progress.current >= this.progress.target && !this.isUnlocked) {
+
+  const unlockedNow = !this.isUnlocked && this.progress.current >= this.progress.target;
+
+  if (unlockedNow) {
     this.isUnlocked = true;
     this.unlockedAt = new Date();
   }
-  
-  return this.save();
+
+  await this.save();
+  return { doc: this, unlockedNow };
 };
 
-// Method to unlock badge
-userBadgeSchema.methods.unlock = function() {
+userBadgeSchema.methods.unlock = async function () {
   if (!this.isUnlocked) {
     this.isUnlocked = true;
     this.unlockedAt = new Date();
     this.progress.current = this.progress.target;
     this.progress.percentage = 100;
     this.lastUpdated = new Date();
-    return this.save();
+    await this.save();
   }
-  return Promise.resolve(this);
+  return this;
 };
 
-// Static method to get user's unlocked badges
-userBadgeSchema.statics.getUnlockedBadges = function(userId) {
+// Static query helpers
+userBadgeSchema.statics.getUnlockedBadges = function (userId) {
   return this.find({ userId, isUnlocked: true })
     .populate('badgeId')
     .sort({ unlockedAt: -1 });
 };
 
-// Static method to get user's badge progress
-userBadgeSchema.statics.getUserProgress = function(userId) {
+userBadgeSchema.statics.getUserProgress = function (userId) {
   return this.find({ userId })
     .populate('badgeId')
     .sort({ 'progress.percentage': -1, 'badgeId.points': -1 });
 };
 
-// Static method to get user's progress for specific badge
-userBadgeSchema.statics.getUserBadgeProgress = function(userId, badgeId) {
+userBadgeSchema.statics.getUserBadgeProgress = function (userId, badgeId) {
   return this.findOne({ userId, badgeId }).populate('badgeId');
 };
 
-// Static method to create or update user badge progress
-userBadgeSchema.statics.createOrUpdateProgress = function(userId, badgeId, currentValue, targetValue) {
+userBadgeSchema.statics.createOrUpdateProgress = function (userId, badgeId, currentValue, targetValue) {
   return this.findOneAndUpdate(
     { userId, badgeId },
     {
@@ -124,19 +129,19 @@ userBadgeSchema.statics.createOrUpdateProgress = function(userId, badgeId, curre
         progress: {
           current: Math.min(currentValue, targetValue),
           target: targetValue,
-          percentage: Math.round((Math.min(currentValue, targetValue) / targetValue) * 100)
+          percentage: Math.round((Math.min(currentValue, targetValue) / targetValue) * 100),
         },
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
       },
       $setOnInsert: {
         isUnlocked: false,
-        unlockedAt: null
-      }
+        unlockedAt: null,
+      },
     },
     {
       upsert: true,
       new: true,
-      setDefaultsOnInsert: true
+      setDefaultsOnInsert: true,
     }
   );
 };

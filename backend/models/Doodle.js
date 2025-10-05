@@ -23,11 +23,11 @@ const doodleSchema = new mongoose.Schema({
     maxlength: [500, 'Description cannot exceed 500 characters']
   },
   imageData: {
-    type: String, // Base64 encoded image data
+    type: String,
     required: [true, 'Image data is required']
   },
   imageUrl: {
-    type: String, // Optional: URL if image is stored externally
+    type: String,
     trim: true
   },
   tags: [{
@@ -90,16 +90,8 @@ const doodleSchema = new mongoose.Schema({
     default: false
   },
   completionTime: {
-    type: Number, // in seconds
+    type: Number,
     min: [0, 'Completion time cannot be negative']
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
 }, {
   timestamps: true,
@@ -107,7 +99,9 @@ const doodleSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Virtual for user info
+// ------------------------
+// Virtuals
+// ------------------------
 doodleSchema.virtual('user', {
   ref: 'User',
   localField: 'userId',
@@ -115,7 +109,6 @@ doodleSchema.virtual('user', {
   justOne: true
 });
 
-// Virtual for challenge info
 doodleSchema.virtual('challenge', {
   ref: 'Challenge',
   localField: 'challengeId',
@@ -123,29 +116,32 @@ doodleSchema.virtual('challenge', {
   justOne: true
 });
 
-// Indexes for efficient queries
+// ------------------------
+// Indexes
+// ------------------------
 doodleSchema.index({ userId: 1, createdAt: -1 });
 doodleSchema.index({ challengeId: 1, createdAt: -1 });
 doodleSchema.index({ isPublic: 1, isFeatured: 1, createdAt: -1 });
 doodleSchema.index({ tags: 1 });
 doodleSchema.index({ likes: -1, createdAt: -1 });
 
-// Pre-save middleware to update the updatedAt field
+// ------------------------
+// Pre-save middleware
+// ------------------------
 doodleSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
-  next();
-});
-
-// Pre-save middleware to update rating from ratings array
-doodleSchema.pre('save', function(next) {
+  
   if (this.ratings && this.ratings.length > 0) {
     const totalRating = this.ratings.reduce((sum, r) => sum + r.rating, 0);
     this.rating = totalRating / this.ratings.length;
   }
+  
   next();
 });
 
-// Static method to get doodles with filters
+// ------------------------
+// Static methods
+// ------------------------
 doodleSchema.statics.getDoodles = function(filters = {}) {
   const {
     challengeId,
@@ -161,69 +157,27 @@ doodleSchema.statics.getDoodles = function(filters = {}) {
   } = filters;
 
   const query = {};
-
   if (challengeId) query.challengeId = challengeId;
   if (userId) query.userId = userId;
   if (isPublic !== undefined) query.isPublic = isPublic;
   if (isFeatured !== undefined) query.isFeatured = isFeatured;
   if (tags && tags.length > 0) query.tags = { $in: tags };
-  if (search) {
-    query.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { description: { $regex: search, $options: 'i' } }
-    ];
-  }
+  if (search) query.$or = [
+    { title: { $regex: search, $options: 'i' } },
+    { description: { $regex: search, $options: 'i' } }
+  ];
 
   const sortOptions = {};
   sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
   return this.find(query)
     .sort(sortOptions)
-    .limit(limit * 1)
     .skip((page - 1) * limit)
+    .limit(limit)
     .populate('user', 'firstName lastName username avatar')
     .populate('challenge', 'title prompt category difficulty');
 };
 
-// Instance method to like/unlike a doodle
-doodleSchema.methods.toggleLike = async function(userId) {
-  const userIndex = this.likedBy.indexOf(userId);
-  
-  if (userIndex === -1) {
-    // Like the doodle
-    this.likedBy.push(userId);
-    this.likes += 1;
-  } else {
-    // Unlike the doodle
-    this.likedBy.splice(userIndex, 1);
-    this.likes = Math.max(0, this.likes - 1);
-  }
-  
-  return this.save();
-};
-
-// Instance method to add a rating
-doodleSchema.methods.addRating = async function(userId, rating) {
-  // Remove existing rating from this user
-  this.ratings = this.ratings.filter(r => r.userId.toString() !== userId.toString());
-  
-  // Add new rating
-  this.ratings.push({ userId, rating });
-  
-  // Update average rating
-  const totalRating = this.ratings.reduce((sum, r) => sum + r.rating, 0);
-  this.rating = totalRating / this.ratings.length;
-  
-  return this.save();
-};
-
-// Instance method to add a comment
-doodleSchema.methods.addComment = async function(userId, text) {
-  this.comments.push({ userId, text });
-  return this.save();
-};
-
-// Static method to get featured doodles
 doodleSchema.statics.getFeaturedDoodles = function(limit = 10) {
   return this.find({ isPublic: true, isFeatured: true })
     .sort({ createdAt: -1 })
@@ -232,20 +186,43 @@ doodleSchema.statics.getFeaturedDoodles = function(limit = 10) {
     .populate('challenge', 'title prompt category difficulty');
 };
 
-// Static method to get trending doodles (most liked in recent time)
 doodleSchema.statics.getTrendingDoodles = function(days = 7, limit = 10) {
   const dateThreshold = new Date();
   dateThreshold.setDate(dateThreshold.getDate() - days);
-  
-  return this.find({
-    isPublic: true,
-    createdAt: { $gte: dateThreshold }
-  })
+
+  return this.find({ isPublic: true, createdAt: { $gte: dateThreshold } })
     .sort({ likes: -1, createdAt: -1 })
     .limit(limit)
     .populate('user', 'firstName lastName username avatar')
     .populate('challenge', 'title prompt category difficulty');
 };
 
-module.exports = mongoose.model('Doodle', doodleSchema);
+// ------------------------
+// Instance methods
+// ------------------------
+doodleSchema.methods.toggleLike = async function(userId) {
+  const index = this.likedBy.indexOf(userId);
+  if (index === -1) {
+    this.likedBy.push(userId);
+    this.likes += 1;
+  } else {
+    this.likedBy.splice(index, 1);
+    this.likes = Math.max(0, this.likes - 1);
+  }
+  return this.save();
+};
 
+doodleSchema.methods.addRating = async function(userId, rating) {
+  this.ratings = this.ratings.filter(r => r.userId.toString() !== userId.toString());
+  this.ratings.push({ userId, rating });
+  const totalRating = this.ratings.reduce((sum, r) => sum + r.rating, 0);
+  this.rating = totalRating / this.ratings.length;
+  return this.save();
+};
+
+doodleSchema.methods.addComment = async function(userId, text) {
+  this.comments.push({ userId, text });
+  return this.save();
+};
+
+module.exports = mongoose.model('Doodle', doodleSchema);
