@@ -111,5 +111,5 @@ module.exports = {
     },
   },
   plugins: [],
-}
+};
 

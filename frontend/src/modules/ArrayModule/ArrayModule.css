@@ -1,0 +1,152 @@
+/* ArrayModule.css */
+
+/* Container */
+.max-w-5xl {
+  max-width: 80rem; /* 1280px */
+}
+
+/* Array Visualizer */
+.array-visualizer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.array-element {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #d1d5db; /* gray-300 */
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1.125rem; /* text-lg */
+  transition: all 0.3s ease;
+  background-color: #ffffff;
+}
+
+.array-element.highlight {
+  background-color: #fcd34d; /* yellow-300 */
+  animation: pulse 1s infinite;
+  transform: scale(1.1);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1.1); }
+  50% { transform: scale(1.0); }
+}
+
+/* Controls Panel */
+.array-controls {
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.array-controls input {
+  border: 1px solid #d1d5db;
+  padding: 6px 8px;
+  border-radius: 6px;
+  width: 100px;
+}
+
+.array-controls button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.array-controls button:hover {
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+/* Step Instructions */
+.step-instructions {
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.step-instructions h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.step-instructions p {
+  font-size: 0.875rem;
+  color: #374151; /* gray-700 */
+}
+
+/* Doodle Canvas */
+.doodle-container {
+  margin-top: 16px;
+}
+
+.doodle-container h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.doodle-preview {
+  margin-top: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  max-width: 100%;
+}
+
+/* Step Navigation */
+.step-navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.step-navigation button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.step-navigation button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.step-navigation .prev {
+  background-color: #d1d5db; /* gray-300 */
+}
+
+.step-navigation .next {
+  background-color: #3b82f6; /* blue-500 */
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .array-element {
+    width: 48px;
+    height: 48px;
+    font-size: 1rem;
+  }
+
+  .array-controls input {
+    width: 80px;
+  }
+
+  .step-navigation button {
+    padding: 6px 12px;
+  }
+}

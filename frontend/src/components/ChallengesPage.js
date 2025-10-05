@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import ChallengeList from './ChallengeList';
 import ChallengeDetail from './ChallengeDetail';
 import DoodleGallery from './DoodleGallery';
@@ -7,7 +8,24 @@ const ChallengesPage = () => {
   const [currentView, setCurrentView] = useState('list'); // 'list', 'detail', 'gallery'
   const [selectedChallenge, setSelectedChallenge] = useState(null);
   const [completedDoodle, setCompletedDoodle] = useState(null);
+  const [challenges, setChallenges] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
+  // Fetch challenges from backend
+  useEffect(() => {
+    setLoading(true);
+    axios
+      .get('/api/challenges')
+      .then(res => {
+        setChallenges(res.data.data.challenges || []);
+        setError('');
+      })
+      .catch(() => setError('Failed to load challenges!'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Handlers
   const handleChallengeSelect = (challenge) => {
     setSelectedChallenge(challenge);
     setCurrentView('detail');
@@ -30,23 +48,39 @@ const ChallengesPage = () => {
 
   const handleChallengeComplete = (doodle) => {
     setCompletedDoodle(doodle);
-    // Show success message and options
     setTimeout(() => {
       alert('🎉 Challenge completed successfully! Your doodle has been submitted.');
     }, 100);
   };
 
   const handleDoodleSelect = (doodle) => {
-    // Could open a modal or navigate to a detailed view
     console.log('Selected doodle:', doodle);
   };
 
+  // Render logic for main content based on currentView
   const renderView = () => {
+    if (loading) {
+      return <div className="text-center text-lg py-8">Loading challenges...</div>;
+    }
+    if (error) {
+      return (
+        <div className="text-center text-red-500 font-medium py-8">
+          {error}
+          <button
+            onClick={() => window.location.reload()}
+            className="ml-4 px-3 py-1 bg-blue-500 text-white rounded"
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
     switch (currentView) {
       case 'detail':
         return (
           <ChallengeDetail
             challengeId={selectedChallenge._id}
+            challenge={selectedChallenge}
             onBack={handleBackToList}
             onComplete={handleChallengeComplete}
           />
@@ -55,18 +89,21 @@ const ChallengesPage = () => {
         return (
           <DoodleGallery
             challengeId={selectedChallenge._id}
+            challenge={selectedChallenge}
             onDoodleSelect={handleDoodleSelect}
           />
         );
       default:
         return (
           <ChallengeList
+            challenges={challenges}
             onChallengeSelect={handleChallengeSelect}
           />
         );
     }
   };
 
+  // Header logic (unchanged from your original for aesthetics)
   const renderHeader = () => {
     switch (currentView) {
       case 'detail':
@@ -136,12 +173,10 @@ const ChallengesPage = () => {
           </div>
         </div>
       </div>
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {renderView()}
       </div>
-
       {/* Success Modal */}
       {completedDoodle && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -154,7 +189,6 @@ const ChallengesPage = () => {
               <p className="text-gray-600 mb-6">
                 Your doodle has been submitted successfully. Great job!
               </p>
-              
               <div className="space-y-3">
                 <button
                   onClick={() => {

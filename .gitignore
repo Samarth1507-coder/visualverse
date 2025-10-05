@@ -5,6 +5,8 @@ build/
 dist-ssr/
 *.local
 
+*/.cache/
+
 # production
 .env
 

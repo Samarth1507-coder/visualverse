@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 // Create Auth Context
@@ -6,10 +6,10 @@ const AuthContext = createContext();
 
 // Initial state
 const initialState = {
-  user: null,
-  token: localStorage.getItem('token'),
+  user: { username: 'Guest', isGuest: true },
+  token: localStorage.getItem('token') || null,
   isAuthenticated: false,
-  loading: true,
+  loading: false,
   error: null,
 };
 
@@ -22,12 +22,15 @@ const AUTH_ACTIONS = {
   AUTH_ERROR: 'AUTH_ERROR',
   CLEAR_ERROR: 'CLEAR_ERROR',
   SET_LOADING: 'SET_LOADING',
+  SIGNUP_SUCCESS: 'SIGNUP_SUCCESS',
+  SIGNUP_FAIL: 'SIGNUP_FAIL',
 };
 
-// Auth reducer
+// Reducer
 const authReducer = (state, action) => {
   switch (action.type) {
     case AUTH_ACTIONS.LOGIN_SUCCESS:
+    case AUTH_ACTIONS.SIGNUP_SUCCESS:
       localStorage.setItem('token', action.payload.token);
       return {
         ...state,
@@ -41,160 +44,127 @@ const authReducer = (state, action) => {
       return {
         ...state,
         user: action.payload,
-        isAuthenticated: true,
+        isAuthenticated: !action.payload.isGuest,
         loading: false,
         error: null,
       };
     case AUTH_ACTIONS.LOGIN_FAIL:
+    case AUTH_ACTIONS.SIGNUP_FAIL:
     case AUTH_ACTIONS.AUTH_ERROR:
     case AUTH_ACTIONS.LOGOUT:
       localStorage.removeItem('token');
       return {
         ...state,
         token: null,
-        user: null,
+        user: { username: 'Guest', isGuest: true },
         isAuthenticated: false,
         loading: false,
         error: action.payload,
       };
     case AUTH_ACTIONS.CLEAR_ERROR:
-      return {
-        ...state,
-        error: null,
-      };
+      return { ...state, error: null };
     case AUTH_ACTIONS.SET_LOADING:
-      return {
-        ...state,
-        loading: action.payload,
-      };
+      return { ...state, loading: action.payload };
     default:
       return state;
   }
 };
 
-// Auth Provider Component
+// Set auth token in axios headers
+const setAuthToken = (token) => {
+  if (token) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete axios.defaults.headers.common['Authorization'];
+  }
+};
+
+// Auth Provider component
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Set auth token header
-  const setAuthToken = (token) => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
+  // Load user from backend (or fallback to guest)
+  const loadUser = useCallback(async () => {
+    if (!state.token) {
+      dispatch({ type: AUTH_ACTIONS.USER_LOADED, payload: { username: 'Guest', isGuest: true } });
+      return;
     }
-  };
 
-  // Load user
-  const loadUser = async () => {
+    setAuthToken(state.token);
     try {
-      if (state.token) {
-        setAuthToken(state.token);
-        const res = await axios.get('/api/auth/me');
-        dispatch({
-          type: AUTH_ACTIONS.USER_LOADED,
-          payload: res.data.data.user,
-        });
+      const res = await axios.get('/api/auth/me');
+      if (res.data?.data?.user) {
+        dispatch({ type: AUTH_ACTIONS.USER_LOADED, payload: res.data.data.user });
       } else {
-        dispatch({ type: AUTH_ACTIONS.AUTH_ERROR });
+        dispatch({ type: AUTH_ACTIONS.AUTH_ERROR, payload: 'Failed to load user' });
       }
-    } catch (error) {
-      console.error('Load user error:', error);
-      dispatch({ type: AUTH_ACTIONS.AUTH_ERROR });
+    } catch (err) {
+      dispatch({ type: AUTH_ACTIONS.AUTH_ERROR, payload: err.response?.data?.message || 'Failed to load user' });
     }
-  };
+  }, [state.token]);
 
-  // Login user
+  // Login function
   const login = async (email, password) => {
+    dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
     try {
-      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-      
       const res = await axios.post('/api/auth/login', { email, password });
-      
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN_SUCCESS,
-        payload: res.data.data,
-      });
-      
+      if (!res.data.token || !res.data.user) throw new Error('Invalid response from server');
+      dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: res.data });
       return { success: true };
-    } catch (error) {
-      console.error('Login error:', error);
-      const message = error.response?.data?.message || 'Login failed';
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN_FAIL,
-        payload: message,
-      });
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || 'Login failed';
+      dispatch({ type: AUTH_ACTIONS.LOGIN_FAIL, payload: message });
       return { success: false, error: message };
     }
   };
 
-  // Register user
-  const register = async (userData) => {
+  // Signup function
+  const signup = async (formData) => {
+    dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
     try {
-      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-      
-      const res = await axios.post('/api/auth/register', userData);
-      
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN_SUCCESS,
-        payload: res.data.data,
-      });
-      
+      const res = await axios.post('/api/auth/register', formData);
+      if (!res.data.token || !res.data.user) throw new Error('Invalid response from server');
+      dispatch({ type: AUTH_ACTIONS.SIGNUP_SUCCESS, payload: res.data });
       return { success: true };
-    } catch (error) {
-      console.error('Registration error:', error);
-      const message = error.response?.data?.message || 'Registration failed';
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN_FAIL,
-        payload: message,
-      });
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || 'Signup failed';
+      dispatch({ type: AUTH_ACTIONS.SIGNUP_FAIL, payload: message });
       return { success: false, error: message };
     }
   };
 
-  // Logout user
-  const logout = async () => {
-    try {
-      if (state.token) {
-        await axios.post('/api/auth/logout');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      dispatch({ type: AUTH_ACTIONS.LOGOUT });
-    }
+  // Logout function
+  const logout = () => {
+    dispatch({ type: AUTH_ACTIONS.LOGOUT });
   };
 
   // Clear errors
-  const clearError = () => {
-    dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
-  };
+  const clearError = () => dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
 
-  // Load user on mount
+  // Load user on mount or token change
   useEffect(() => {
     loadUser();
-  }, []);
+  }, [loadUser, state.token]);
 
-  // Set auth token on token change
+  // Sync axios headers with token
   useEffect(() => {
     setAuthToken(state.token);
   }, [state.token]);
 
-  const value = {
-    user: state.user,
-    token: state.token,
-    isAuthenticated: state.isAuthenticated,
-    loading: state.loading,
-    error: state.error,
-    login,
-    register,
-    logout,
-    clearError,
-    loadUser,
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+        loading: state.loading,
+        error: state.error,
+        login,
+        logout,
+        signup,
+        clearError,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -203,11 +173,6 @@ export const AuthProvider = ({ children }) => {
 // Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
-
-
-
